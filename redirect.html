@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Redirecting...</title>
+  </head>
+  <body>
+    <form method="POST" id="form">
+      <button type="submit">
+        submit
+      </button>
+    </form>
+    <script>
+      function QueryStringToJSON() {            
+          var pairs = location.search.slice(1).split('&');
+
+          var result = {};
+          pairs.forEach(function(pair) {
+              pair = pair.split('=');
+              result[pair[0]] = decodeURIComponent(pair[1] || '');
+          });
+
+          return JSON.parse(JSON.stringify(result));
+      }
+      
+      var form = document.getElementById('form');
+
+      var querystring = QueryStringToJSON();
+      var url = querystring.url;
+      delete querystring.url;
+      
+      Object.keys(querystring).forEach(function (key) {
+        var input = document.createElement('input');
+        input.setAttribute('name', key);
+        input.setAttribute('value', querystring[key]);
+        input.setAttribute('type', 'hidden');
+        form.appendChild(input);
+      });
+      
+      form.setAttribute('action', url);
+      form.submit();
+    </script>
+  </body>
+</html>
