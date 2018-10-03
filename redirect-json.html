@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Redirecting...</title>
+  </head>
+  <body>
+    <script>
+      function parseParams() {
+        var qs = location.search.slice(1);
+        if (!qs) {
+          throw new Error('Invalid parameters: query string is empty');
+        }
+        try {
+          var parsed = JSON.parse(decodeURIComponent(qs));
+          if (!parsed.url || typeof parsed.url != 'string') {
+            throw new Error('Invalid parameters: url should be a string');
+          }
+          if (!parsed.data && typeof parsed.data != 'object') {
+            throw new Error('Invalid parameters: data should be an object');
+          }
+          return parsed;
+        } catch (err) {
+          throw new Error('Invalid parameters: query string should contain a valid json; ' +
+            'use encodeURIComponent(JSON.stringify({ url, method, data }))');
+        }
+      }
+
+      var form = document.createElement('form');
+      document.documentElement.appendChild(form);
+      var params = parseParams();
+      Object.keys(params.data).forEach(function (key) {
+        var input = document.createElement('input');
+        input.setAttribute('name', key);
+        input.setAttribute('value', params.data[key]);
+        input.setAttribute('type', 'hidden');
+        form.appendChild(input);
+      });
+
+      form.setAttribute('method', params.method || 'POST');
+      form.setAttribute('action', params.url);
+      console.log('form');
+      form.submit();
+    </script>
+  </body>
+</html>
