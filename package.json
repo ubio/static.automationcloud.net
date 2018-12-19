@@ -1,0 +1,8 @@
+{
+  "name": "static.automationcloud.net",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "ubio",
+  "license": "ISC",
+  "private": true
+}
