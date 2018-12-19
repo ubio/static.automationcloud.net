@@ -10,7 +10,7 @@
       </button>
     </form>
     <script>
-      function QueryStringToJSON() {            
+      function QueryStringToJSON() {
           var pairs = location.search.slice(1).split('&');
 
           var result = {};
@@ -21,13 +21,13 @@
 
           return JSON.parse(JSON.stringify(result));
       }
-      
+
       var form = document.getElementById('form');
 
       var querystring = QueryStringToJSON();
       var url = querystring.url;
       delete querystring.url;
-      
+
       Object.keys(querystring).forEach(function (key) {
         var input = document.createElement('input');
         input.setAttribute('name', key);
@@ -35,7 +35,7 @@
         input.setAttribute('type', 'hidden');
         form.appendChild(input);
       });
-      
+
       form.setAttribute('action', url);
       form.submit();
     </script>

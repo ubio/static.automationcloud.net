@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>3D Secure</title>
+  </head>
+  <body>
+    <script>
+      function QueryStringToJSON() {
+          var pairs = location.search.slice(1).split('&');
+
+          var result = {};
+          pairs.forEach(function(pair) {
+              pair = pair.split('=');
+              result[pair[0]] = decodeURIComponent(pair[1] || '');
+          });
+
+          return result;
+      }
+
+      var query = QueryStringToJSON();
+      var tdsId = query.tdsId || '';
+      var callbackUrl = decodeURIComponent(query.callbackUrl || '');
+      if (!tdsId) {
+          throw new Error('tdsId query parameter is missing');
+      }
+      if (!callbackUrl) {
+          throw new Error('callbackUrl query parameter is missing');
+      }
+
+      window.addEventListener('message', function(ev) {
+          if (ev.data === '3dsecure-finished') {
+              location.href = callbackUrl;
+          }
+      });
+
+      var iframe = document.createElement('iframe');
+      iframe.style.border = '0';
+      iframe.style.width = '100%';
+      iframe.style.height = '100%';
+      iframe.src = 'https://api.automationcloud.net/verify/' + tdsId;
+      document.body.appendChild(iframe);
+    </script>
+  </body>
+</html>
