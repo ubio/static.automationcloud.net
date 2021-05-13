@@ -1,0 +1,105 @@
+name: CI
+
+env:
+  NAME: static
+  REGISTRY: gcr.io
+  IMAGE_NAME: static
+  STAGING_NAMESPACE: automation-cloud-development
+  PRODUCTION_NAMESPACE: automation-cloud-production
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v1
+        with:
+          go-version: "1.14.6"
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Start Notification
+        uses: docker://automationcloud/rsslack:latest
+        with:
+          channel: ${{ secrets.SLACK_CHANNEL }}
+          message: ":point_right: *${{ env.NAME }}* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|workflow run> has started"
+          slack_token: ${{ secrets.SLACK_TOKEN }}
+
+      - name: Extract tag as env var
+        run: |
+          echo "TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      - name: Build and push development image
+        uses: docker/build-push-action@v1
+        with:
+          dockerfile: Dockerfile
+          username: _json_key
+          password: ${{ secrets.GCP_ACCESS_DEVELOPMENT }}
+          registry: ${{ env.REGISTRY }}
+          repository: ${{ env.STAGING_NAMESPACE }}/${{ env.IMAGE_NAME }}
+          tag_with_ref: true
+
+      - name: Notify Slack
+        if: ${{ success() }}
+        uses: docker://automationcloud/slack-docker-build-success:latest
+        with:
+          channel: ${{ secrets.SLACK_CHANNEL }}
+          slack_token: ${{ secrets.SLACK_TOKEN }}
+          name: ${{ env.NAME }}
+          registry: ${{ env.REGISTRY }}
+          namespace: ${{ env.STAGING_NAMESPACE }}
+          image: ${{ env.IMAGE_NAME }}
+          tag: ${{ env.TAG }}
+
+      - name: Build and push production image
+        uses: docker/build-push-action@v1
+        with:
+          dockerfile: Dockerfile
+          username: _json_key
+          password: ${{ secrets.GCP_ACCESS_PRODUCTION }}
+          registry: ${{ env.REGISTRY }}
+          repository: ${{ env.PRODUCTION_NAMESPACE }}/${{ env.IMAGE_NAME }}
+          tag_with_ref: true
+
+      - name: Notify Slack
+        if: ${{ success() }}
+        uses: docker://automationcloud/slack-docker-build-success:latest
+        with:
+          channel: ${{ secrets.SLACK_CHANNEL }}
+          slack_token: ${{ secrets.SLACK_TOKEN }}
+          name: ${{ env.NAME }}
+          registry: ${{ env.REGISTRY }}
+          namespace: ${{ env.PRODUCTION_NAMESPACE }}
+          image: ${{ env.IMAGE_NAME }}
+          tag: ${{ env.TAG }}
+
+      - name: Notify k8s repo
+        uses: docker://automationcloud/repository-dispatch:latest
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+          owner: ubio
+          repository: k8s
+          event: built-${{ env.IMAGE_NAME }}
+          payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "tag": "${{ env.TAG }}"}'
+
+      - name: Notify Slack on Success
+        if: ${{ success() }}
+        uses: docker://automationcloud/rsslack:latest
+        with:
+          channel: ${{ secrets.SLACK_CHANNEL }}
+          message: ":feellikesir: *${{ env.NAME }}* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|workflow run> has completed. <https://github.com/ubio/k8s|k8s> has been notified"
+          slack_token: ${{ secrets.SLACK_TOKEN }}
+
+      - name: Notify Slack on Failure
+        if: ${{ failure() }}
+        uses: docker://automationcloud/rsslack:latest
+        with:
+          channel: ${{ secrets.SLACK_CHANNEL }}
+          message: ":shushing_face: *${{ env.NAME }}* workflow failed\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Run ${{ github.run_id }}>"
+          slack_token: ${{ secrets.SLACK_TOKEN }}
